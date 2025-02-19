@@ -12,13 +12,19 @@ class CharacterService {
         return newCharacter
     }
 
-    fun getAllCharacters(): List<Character> = characters.map { it.copy(shouldLevelUp = it.experience >= (it.level * 1000)) }
+    fun getAllCharacters(): List<Character> = characters.map { character ->
+        character.copy(shouldLevelUp = character.experience >= (character.level * 1000))
+    }
 
     fun getCharacterById(id: Long): Character? {
-        return characters.find { it.id == id }?.copy(shouldLevelUp = it.experience >= (it.level * 1000))
+        return characters.find { character -> character.id == id }?.let { character ->
+            character.copy(shouldLevelUp = character.experience >= (character.level * 1000))
+        }
     }
 
     fun getChallengersForCurrentUser(accountId: Long): List<Character> {
-        return characters.filter { it.accountId == accountId }.map { it.copy(shouldLevelUp = it.experience >= (it.level * 1000)) }
+        return characters.filter { character -> character.accountId == accountId }.map { character ->
+            character.copy(shouldLevelUp = character.experience >= (character.level * 1000))
+        }
     }
 }
