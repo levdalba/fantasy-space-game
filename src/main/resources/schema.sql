@@ -49,4 +49,3 @@ create table if not exists round
     stamina_delta int not null,
     mana_delta int not null
 );
-
