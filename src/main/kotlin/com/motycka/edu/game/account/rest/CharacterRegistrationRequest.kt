@@ -1,14 +1,12 @@
 package com.motycka.edu.game.account.rest
 
 data class CharacterRegistrationRequest(
-    val accountId: Long,
     val name: String,
-    val classType: String,
     val health: Int,
-    val attack: Int,
-    val experience: Int,
-    val defense: Int? = null,
+    val attackPower: Int,
     val stamina: Int? = null,
-    val healing: Int? = null,
-    val mana: Int? = null
+    val defensePower: Int? = null,
+    val mana: Int? = null,
+    val healingPower: Int? = null,
+    val characterClass: String // WARRIOR or SORCERER
 )

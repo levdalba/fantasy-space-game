@@ -14,27 +14,43 @@ class CharacterController(
     private val characterService: CharacterService
 ) {
 
-    @PostMapping
-    fun createCharacter(
-        @RequestBody characterRequest: CharacterRegistrationRequest
-    ): ResponseEntity<CharacterResponse> {
-        val character = characterService.createCharacter(characterRequest.toCharacter())
-        return ResponseEntity.status(HttpStatus.CREATED).body(character.toCharacterResponse())
-    }
-
     @GetMapping
-    fun getAllCharacters(): List<CharacterResponse> {
-        return characterService.getAllCharacters().map { it.toCharacterResponse() }
+    fun getAllCharacters(
+        @RequestParam(required = false) classFilter: String?,
+        @RequestParam(required = false) nameFilter: String?
+    ): List<CharacterResponse> {
+        val currentUserAccountId = getCurrentUserAccountId()
+        var characters = characterService.getAllCharacters()
+
+        // Apply filters
+        if (!classFilter.isNullOrBlank()) {
+            characters = characters.filter { it.characterClass.equals(classFilter, ignoreCase = true) }
+        }
+        if (!nameFilter.isNullOrBlank()) {
+            characters = characters.filter { it.name.contains(nameFilter, ignoreCase = true) }
+        }
+
+        return characters.map { it.toCharacterResponse(currentUserAccountId) }
     }
 
     @GetMapping("/{id}")
     fun getCharacterById(@PathVariable id: Long): ResponseEntity<CharacterResponse> {
+        val currentUserAccountId = getCurrentUserAccountId()
         val character = characterService.getCharacterById(id)
         return if (character != null) {
-            ResponseEntity.ok(character.toCharacterResponse())
+            ResponseEntity.ok(character.toCharacterResponse(currentUserAccountId))
         } else {
             ResponseEntity.notFound().build()
         }
+    }
+
+    @PostMapping
+    fun createCharacter(
+        @RequestBody characterRequest: CharacterRegistrationRequest
+    ): ResponseEntity<CharacterResponse> {
+        val currentUserAccountId = getCurrentUserAccountId()
+        val character = characterService.createCharacter(characterRequest.toCharacter(currentUserAccountId))
+        return ResponseEntity.status(HttpStatus.CREATED).body(character.toCharacterResponse(currentUserAccountId))
     }
 
     @GetMapping("/challengers")
@@ -42,7 +58,7 @@ class CharacterController(
         val currentUserAccountId = getCurrentUserAccountId()
         val challengers = characterService.getChallengersForCurrentUser(currentUserAccountId)
         return if (challengers.isNotEmpty()) {
-            ResponseEntity.ok(challengers.map { it.toCharacterResponse() })
+            ResponseEntity.ok(challengers.map { it.toCharacterResponse(currentUserAccountId) })
         } else {
             ResponseEntity.noContent().build()
         }
@@ -52,15 +68,13 @@ class CharacterController(
     fun createChallenger(
         @RequestBody characterRequest: CharacterRegistrationRequest
     ): ResponseEntity<CharacterResponse> {
-        // Ensure the character is associated with the current user
         val currentUserAccountId = getCurrentUserAccountId()
-        val character = characterRequest.toCharacter().copy(accountId = currentUserAccountId)
+        val character = characterRequest.toCharacter(currentUserAccountId)
         val createdCharacter = characterService.createCharacter(character)
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdCharacter.toCharacterResponse())
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdCharacter.toCharacterResponse(currentUserAccountId))
     }
 
     private fun getCurrentUserAccountId(): Long {
-        // For now, simulate with a hardcoded value. In a real app, use SecurityContextHolder:
         return 1L // Hardcoded for testing; replace with actual logic
     }
 }
