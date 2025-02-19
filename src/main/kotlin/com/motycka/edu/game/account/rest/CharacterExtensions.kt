@@ -3,6 +3,11 @@ package com.motycka.edu.game.account.rest
 import com.motycka.edu.game.character.Character
 
 fun CharacterRegistrationRequest.toCharacter(accountId: Long): Character {
+    val charClass = when (this.characterClass.uppercase()) {
+        "WARRIOR" -> Character.CharacterClass.WARRIOR
+        "SORCERER" -> Character.CharacterClass.SORCERER
+        else -> throw IllegalArgumentException("Invalid character class: ${this.characterClass}")
+    }
     return Character(
         accountId = accountId,
         name = this.name,
@@ -12,7 +17,7 @@ fun CharacterRegistrationRequest.toCharacter(accountId: Long): Character {
         defensePower = this.defensePower,
         mana = this.mana,
         healingPower = this.healingPower,
-        characterClass = this.characterClass,
+        characterClass = charClass, // Now using the enum
         level = 1, // Default level
         experience = 0, // Default experience
         shouldLevelUp = false // Default
@@ -29,7 +34,7 @@ fun Character.toCharacterResponse(currentUserAccountId: Long): CharacterResponse
         defensePower = this.defensePower,
         mana = this.mana,
         healingPower = this.healingPower,
-        characterClass = this.characterClass,
+        characterClass = this.characterClass.name, // Convert enum to String
         level = this.level,
         experience = this.experience,
         shouldLevelUp = this.shouldLevelUp,
