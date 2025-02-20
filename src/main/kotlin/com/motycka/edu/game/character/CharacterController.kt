@@ -2,6 +2,7 @@ package com.motycka.edu.game.character
 
 import com.motycka.edu.game.account.rest.CharacterRegistrationRequest
 import com.motycka.edu.game.account.rest.CharacterResponse
+import com.motycka.edu.game.account.rest.toCharacterResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -21,13 +22,13 @@ class CharacterController(
         var characters = characterService.getAllCharacters()
 
         if (!classFilter.isNullOrBlank()) {
-            characters = characters.filter { it.characterClass.name.equals(classFilter, ignoreCase = true) }
+            characters = characters.filter { it.characterClass.name == classFilter.uppercase() }
         }
         if (!nameFilter.isNullOrBlank()) {
             characters = characters.filter { it.name.contains(nameFilter, ignoreCase = true) }
         }
 
-        return characters.map { CharacterResponse.fromCharacter(it, currentUserAccountId) }
+        return characters.map { it.toCharacterResponse(currentUserAccountId) }
     }
 
     @GetMapping("/{id}")
@@ -35,7 +36,7 @@ class CharacterController(
         val currentUserAccountId = getCurrentUserAccountId()
         val character = characterService.getCharacterById(id)
         return if (character != null) {
-            ResponseEntity.ok(CharacterResponse.fromCharacter(character, currentUserAccountId))
+            ResponseEntity.ok(character.toCharacterResponse(currentUserAccountId))
         } else {
             ResponseEntity.notFound().build()
         }
@@ -47,7 +48,7 @@ class CharacterController(
     ): ResponseEntity<CharacterResponse> {
         val currentUserAccountId = getCurrentUserAccountId()
         val character = characterService.createCharacter(characterRequest.toCharacter(currentUserAccountId))
-        return ResponseEntity.status(HttpStatus.CREATED).body(CharacterResponse.fromCharacter(character, currentUserAccountId))
+        return ResponseEntity.status(HttpStatus.CREATED).body(character.toCharacterResponse(currentUserAccountId))
     }
 
     @GetMapping("/challengers")
@@ -55,7 +56,7 @@ class CharacterController(
         val currentUserAccountId = getCurrentUserAccountId()
         val challengers = characterService.getChallengersForCurrentUser(currentUserAccountId)
         return if (challengers.isNotEmpty()) {
-            ResponseEntity.ok(challengers.map { CharacterResponse.fromCharacter(it, currentUserAccountId) })
+            ResponseEntity.ok(challengers.map { it.toCharacterResponse(currentUserAccountId) })
         } else {
             ResponseEntity.noContent().build()
         }
@@ -67,7 +68,7 @@ class CharacterController(
     ): ResponseEntity<CharacterResponse> {
         val currentUserAccountId = getCurrentUserAccountId()
         val character = characterService.createCharacter(characterRequest.toCharacter(currentUserAccountId))
-        return ResponseEntity.status(HttpStatus.CREATED).body(CharacterResponse.fromCharacter(character, currentUserAccountId))
+        return ResponseEntity.status(HttpStatus.CREATED).body(character.toCharacterResponse(currentUserAccountId))
     }
 
     @GetMapping("/opponents")
@@ -75,7 +76,7 @@ class CharacterController(
         val currentUserAccountId = getCurrentUserAccountId()
         val opponents = characterService.getOpponentsForCurrentUser(currentUserAccountId)
         return if (opponents.isNotEmpty()) {
-            ResponseEntity.ok(opponents.map { CharacterResponse.fromCharacter(it, currentUserAccountId) })
+            ResponseEntity.ok(opponents.map { it.toCharacterResponse(currentUserAccountId) })
         } else {
             ResponseEntity.noContent().build()
         }
@@ -87,22 +88,20 @@ class CharacterController(
         @RequestBody updatedCharacter: CharacterRegistrationRequest
     ): ResponseEntity<CharacterResponse> {
         val currentUserAccountId = getCurrentUserAccountId()
-        val existingCharacter = characterService.getCharacterById(id) ?: return ResponseEntity.notFound().build()
+        val character = characterService.getCharacterById(id)?.let { existing ->
+            val newCharacter = existing.copy(
+                name = updatedCharacter.name,
+                health = updatedCharacter.health,
+                attackPower = updatedCharacter.attackPower,
+                stamina = updatedCharacter.stamina,
+                defensePower = updatedCharacter.defensePower,
+                mana = updatedCharacter.mana,
+                healingPower = updatedCharacter.healingPower
+            )
+            characterService.updateCharacter(id, newCharacter)
+        } ?: return ResponseEntity.notFound().build()
 
-        // Convert updatedCharacter to Character, preserving class and accountId
-        val newCharacter = updatedCharacter.toCharacter(existingCharacter.accountId).copy(
-            id = existingCharacter.id,
-            level = existingCharacter.level,
-            experience = existingCharacter.experience,
-            shouldLevelUp = existingCharacter.shouldLevelUp
-        )
-
-        val updated = characterService.updateCharacter(id, newCharacter)
-        return if (updated != null) {
-            ResponseEntity.ok(CharacterResponse.fromCharacter(updated, currentUserAccountId))
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        return ResponseEntity.ok(character.toCharacterResponse(currentUserAccountId))
     }
 
     private fun getCurrentUserAccountId(): Long {

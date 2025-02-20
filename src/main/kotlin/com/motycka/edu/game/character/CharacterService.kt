@@ -7,34 +7,27 @@ class CharacterService {
     private val characters = mutableListOf<Character>()
 
     fun createCharacter(character: Character): Character {
-        characters.add(character.copy(id = (characters.size + 1).toLong()))
-        return characters.last()
+        val newCharacter = character.copy(id = (characters.size + 1).toLong())
+        characters.add(newCharacter)
+        return newCharacter
     }
 
-    fun getAllCharacters(): List<Character> = characters.map { character ->
-        character.copy(shouldLevelUp = character.experience >= (character.level * 1000))
-    }
+    fun getAllCharacters(): List<Character> = characters
 
     fun getCharacterById(id: Long): Character? {
-        return characters.find { character -> character.id == id }?.let { character ->
-            character.copy(shouldLevelUp = character.experience >= (character.level * 1000))
-        }
+        return characters.find { it.id == id }
     }
 
     fun getChallengersForCurrentUser(accountId: Long): List<Character> {
-        return characters.filter { character -> character.accountId == accountId }.map { character ->
-            character.copy(shouldLevelUp = character.experience >= (character.level * 1000))
-        }
+        return characters.filter { it.accountId == accountId }
     }
 
     fun getOpponentsForCurrentUser(accountId: Long): List<Character> {
-        return characters.filter { character -> character.accountId != accountId }.map { character ->
-            character.copy(shouldLevelUp = character.experience >= (character.level * 1000))
-        }
+        return characters.filter { it.accountId != accountId }
     }
 
     fun updateCharacter(id: Long, updatedCharacter: Character): Character? {
-        val index = characters.indexOfFirst { character -> character.id == id }
+        val index = characters.indexOfFirst { it.id == id }
         if (index != -1) {
             val oldCharacter = characters[index]
             val newCharacter = oldCharacter.copy(
@@ -47,7 +40,7 @@ class CharacterService {
                 healingPower = updatedCharacter.healingPower,
                 level = if (oldCharacter.shouldLevelUp) oldCharacter.levelUp().level else oldCharacter.level,
                 experience = if (oldCharacter.shouldLevelUp) 0 else oldCharacter.experience,
-                shouldLevelUp = updatedCharacter.shouldLevelUp && updatedCharacter.experience >= (updatedCharacter.level * 1000)
+                shouldLevelUp = updatedCharacter.shouldLevelUp
             )
             characters[index] = newCharacter
             return newCharacter
