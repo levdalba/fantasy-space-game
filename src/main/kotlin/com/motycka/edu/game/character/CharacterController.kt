@@ -82,26 +82,19 @@ class CharacterController(
         }
     }
 
-    @PutMapping("/{id}")
-    fun updateCharacter(
-        @PathVariable id: Long,
-        @RequestBody updatedCharacter: CharacterRegistrationRequest
-    ): ResponseEntity<CharacterResponse> {
-        val currentUserAccountId = getCurrentUserAccountId()
-        val character = characterService.getCharacterById(id)?.let { existing ->
-            val newCharacter = existing.copy(
-                name = updatedCharacter.name,
-                health = updatedCharacter.health,
-                attackPower = updatedCharacter.attackPower,
-                stamina = updatedCharacter.stamina,
-                defensePower = updatedCharacter.defensePower,
-                mana = updatedCharacter.mana,
-                healingPower = updatedCharacter.healingPower
-            )
-            characterService.updateCharacter(id, newCharacter)
-        } ?: return ResponseEntity.notFound().build()
+    @RestController
+    @RequestMapping("/api/characters")
+    class CharacterController(private val characterService: CharacterService) {
 
-        return ResponseEntity.ok(character.toCharacterResponse(currentUserAccountId))
+        @PutMapping("/{id}")
+        fun updateCharacter(@PathVariable id: Long, @RequestBody updatedCharacter: Character): ResponseEntity<Character> {
+            val character = characterService.updateCharacter(id, updatedCharacter)
+            return if (character != null) {
+                ResponseEntity.ok(character)
+            } else {
+                ResponseEntity.notFound().build()
+            }
+        }
     }
 
     private fun getCurrentUserAccountId(): Long {
