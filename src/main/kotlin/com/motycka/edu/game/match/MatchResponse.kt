@@ -4,5 +4,6 @@ data class MatchResponse(
     val id: String,
     val challenger: CharacterSummary,
     val opponent: CharacterSummary,
-    val rounds: List<Round>
+    val rounds:  List<RoundResponse>,
+    val matchOutcome: String
 )

@@ -2,14 +2,14 @@ package com.motycka.edu.game.character
 
 data class Character(
     val id: Long = 0,
-    val accountId: Long, // To determine ownership
+    val accountId: Long,
     val name: String,
     val health: Int,
     val attackPower: Int,
-    val stamina: Int? = null, // For Warriors
-    val defensePower: Int? = null, // For Warriors
-    val mana: Int? = null, // For Sorcerers
-    val healingPower: Int? = null, // For Sorcerers
+    val stamina: Int? = null,
+    val defensePower: Int? = null,
+    val mana: Int? = null,
+    val healingPower: Int? = null,
     val characterClass: CharacterClass,
     val level: Int = 1,
     val experience: Int = 0,
@@ -34,13 +34,13 @@ data class Character(
                 requireNotNull(stamina) { "Stamina is required for Warriors" }
                 requireNotNull(defensePower) { "Defense power is required for Warriors" }
                 require(mana == null && healingPower == null) { "Warriors cannot have mana or healing power" }
-                require(stamina!! > 0 && defensePower!! >= 0) { "Stamina must be positive, defense power non-negative for Warriors" }
+                require(stamina > 0 && defensePower >= 0) { "Invalid Warrior attributes" }
             }
             CharacterClass.SORCERER -> {
                 requireNotNull(mana) { "Mana is required for Sorcerers" }
                 requireNotNull(healingPower) { "Healing power is required for Sorcerers" }
                 require(stamina == null && defensePower == null) { "Sorcerers cannot have stamina or defense power" }
-                require(mana!! > 0 && healingPower!! >= 0) { "Mana must be positive, healing power non-negative for Sorcerers" }
+                require(mana > 0 && healingPower >= 0) { "Invalid Sorcerer attributes" }
             }
         }
 

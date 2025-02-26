@@ -1,4 +1,5 @@
 package com.motycka.edu.game.account.rest
+
 import com.motycka.edu.game.character.Character
 
 data class CharacterResponse(
@@ -15,24 +16,22 @@ data class CharacterResponse(
     val experience: Int,
     val shouldLevelUp: Boolean,
     val isOwner: Boolean
-) {
-    companion object {
-        fun fromCharacter(character: Character, currentUserAccountId: Long): CharacterResponse {
-            return CharacterResponse(
-                id = character.id,
-                name = character.name,
-                health = character.health,
-                attackPower = character.attackPower,
-                stamina = character.stamina,
-                defensePower = character.defensePower,
-                mana = character.mana,
-                healingPower = character.healingPower,
-                characterClass = character.characterClass.name,
-                level = character.level,
-                experience = character.experience,
-                shouldLevelUp = character.shouldLevelUp,
-                isOwner = character.accountId == currentUserAccountId
-            )
-        }
-    }
+)
+
+fun Character.toCharacterResponse(currentUserAccountId: Long): CharacterResponse {
+    return CharacterResponse(
+        id = this.id,
+        name = this.name,
+        health = this.health,
+        attackPower = this.attackPower,
+        stamina = this.stamina,
+        defensePower = this.defensePower,
+        mana = this.mana,
+        healingPower = this.healingPower,
+        characterClass = this.characterClass.name,
+        level = this.level,
+        experience = this.experience,
+        shouldLevelUp = this.shouldLevelUp,
+        isOwner = this.accountId == currentUserAccountId
+    )
 }

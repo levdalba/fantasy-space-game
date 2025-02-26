@@ -6,11 +6,11 @@ data class CharacterRegistrationRequest(
     val name: String,
     val health: Int,
     val attackPower: Int,
-    val stamina: Int? = null, // For Warriors
-    val defensePower: Int? = null, // For Warriors
-    val mana: Int? = null, // For Sorcerers
-    val healingPower: Int? = null, // For Sorcerers
-    val characterClass: String // "WARRIOR" or "SORCERER"
+    val stamina: Int? = null,
+    val defensePower: Int? = null,
+    val mana: Int? = null,
+    val healingPower: Int? = null,
+    val characterClass: String
 ) {
     fun toCharacter(accountId: Long): Character {
         val charClass = when (characterClass.uppercase()) {

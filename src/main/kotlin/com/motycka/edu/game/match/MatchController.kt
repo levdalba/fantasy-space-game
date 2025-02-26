@@ -1,6 +1,5 @@
 package com.motycka.edu.game.match
-import com.motycka.edu.game.match.MatchRequest
-import com.motycka.edu.game.match.MatchResponse
+
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -11,36 +10,32 @@ class MatchController(
     private val matchService: MatchService
 ) {
 
+    /**
+     * Retrieve all matches. The UI will display them under “Matches”.
+     */
     @GetMapping
     fun getAllMatches(): ResponseEntity<List<MatchResponse>> {
         val matches = matchService.getAllMatches()
-        return if (matches.isNotEmpty()) {
-            ResponseEntity.ok(matches)
-        } else {
-            ResponseEntity.noContent().build()
-        }
+        // Return an empty list if no matches exist so the UI won't fail.
+        return ResponseEntity.ok(matches)
     }
 
+    /**
+     * Create a new match with the given number of rounds, challengerId, and opponentId.
+     */
     @PostMapping
-    fun createMatch(
-        @RequestBody matchRequest: MatchRequest
-    ): ResponseEntity<Any> {
+    fun createMatch(@RequestBody matchRequest: MatchRequest): ResponseEntity<Any> {
         return try {
             val matchResponse = matchService.createMatch(
-                matchRequest.rounds,
-                matchRequest.challengerId,
-                matchRequest.opponentId
+                rounds = matchRequest.rounds,
+                challengerId = matchRequest.challengerId,
+                opponentId = matchRequest.opponentId
             )
+            // Return 201 Created with the new match data
             ResponseEntity.status(HttpStatus.CREATED).body(matchResponse)
         } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                ErrorResponse("error", e.message)
-            )
+            // If something goes wrong, return 400 with an error message
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("error" to e.message))
         }
     }
 }
-
-data class ErrorResponse(
-    val type: String,
-    val message: String?
-)
