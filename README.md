@@ -71,6 +71,7 @@ Characters can be warriors or sorcerers and have different attributes based on t
      "characterClass": "SORCERER"
      }
      ```
+     The characterClass can be one of: **WARRIOR**, **SORCERER**.
      
 4. `GET /api/characters/challengers`
    - Retrieves all challengers (characters owned by the current user).
@@ -132,17 +133,15 @@ The matches API allows users to create and retrieve matches between characters.
           "characterClass": "WARRIOR",
           "level": "5",
           "experienceTotal": 2000,
-          "experienceGained": 100,
-          "isVictor": true
+          "experienceGained": 100
         },
         "opponent": {
           "id": "2",
           "name": "Gandalf",
           "characterClass": "SORCERER",
           "level": "5",
-          "experienceTotal": 1800,
-          "experienceGained": 50,
-          "isVictor": false
+          "experienceTotal": 2000,
+          "experienceGained": 100
         },
         "rounds": [
           {
@@ -153,15 +152,17 @@ The matches API allows users to create and retrieve matches between characters.
             "manaDelta": 0
           },
           {
-            "round": 2,
+            "round": 1,
             "characterId": "2",
-            "healthDelta": -20,
+            "healthDelta": -5,
             "staminaDelta": 0,
             "manaDelta": -10
           }
-        ]
+        ],
+        "matchOutcome": "CHALLENGER_WON"
       }
       ```   
+      Match outcome can be one of: **CHALLENGER_WON**, **OPPONENT_WON**, **DRAW**.
        
 2. `POST /api/matches`
     - Creates a new match.
