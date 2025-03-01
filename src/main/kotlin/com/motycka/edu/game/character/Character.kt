@@ -23,7 +23,7 @@ data class Character(
         validate()
     }
 
-    private fun validate() {
+    fun validate() {
         require(health > 0) { "Health must be greater than 0" }
         require(attackPower >= 0) { "Attack power must be non-negative" }
         require(level >= 1) { "Level must be at least 1" }

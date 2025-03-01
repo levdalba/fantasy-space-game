@@ -12,7 +12,7 @@ data class CharacterResponse(
     val mana: Int? = null,
     val healingPower: Int? = null,
     val characterClass: String,
-    val level: Int,
+    val level: String, // Changed from Int to String to match README
     val experience: Int,
     val shouldLevelUp: Boolean,
     val isOwner: Boolean
@@ -29,7 +29,7 @@ fun Character.toCharacterResponse(currentUserAccountId: Long): CharacterResponse
         mana = this.mana,
         healingPower = this.healingPower,
         characterClass = this.characterClass.name,
-        level = this.level,
+        level = this.level.toString(), // Convert Int to String
         experience = this.experience,
         shouldLevelUp = this.shouldLevelUp,
         isOwner = this.accountId == currentUserAccountId

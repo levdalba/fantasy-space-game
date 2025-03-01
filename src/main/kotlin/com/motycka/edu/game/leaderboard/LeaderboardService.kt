@@ -34,11 +34,13 @@ class LeaderboardService(
         }
     }
 
-    fun getLeaderboard(filterClass: String?): List<LeaderboardEntry> {
-        val entries = leaderboardRepository.getLeaderboardEntries(filterClass)
-        // sort by wins desc, assign positions
+    fun getLeaderboard(filterClass: String?, currentUserAccountId: Long): List<LeaderboardEntry> {
+        val entries = leaderboardRepository.getLeaderboardEntries(filterClass, currentUserAccountId)
         return entries
-            .sortedByDescending { it.wins }
+            .sortedWith(
+                compareByDescending<LeaderboardEntry> { it.wins }
+                    .thenByDescending { it.character.experience }
+            )
             .mapIndexed { index, entry -> entry.copy(position = index + 1) }
     }
 }

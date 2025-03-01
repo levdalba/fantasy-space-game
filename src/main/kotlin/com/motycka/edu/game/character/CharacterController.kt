@@ -5,6 +5,7 @@ import com.motycka.edu.game.account.rest.CharacterRegistrationRequest
 import com.motycka.edu.game.account.rest.CharacterResponse
 import com.motycka.edu.game.account.rest.toCharacter
 import com.motycka.edu.game.account.rest.toCharacterResponse
+import com.motycka.edu.game.character.CharacterUpdateRequest // Import from new package
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -62,8 +63,27 @@ class CharacterController(
     }
 
     @PutMapping("/{id}")
-    fun updateCharacter(@PathVariable id: Long, @RequestBody updated: Character): ResponseEntity<Character> {
-        val character = characterService.updateCharacter(id, updated) ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(character)
+    fun updateCharacter(
+        @PathVariable id: Long,
+        @RequestBody updateRequest: CharacterUpdateRequest
+    ): ResponseEntity<CharacterResponse> {
+        val currentUserAccountId = accountService.getCurrentAccountId()
+        val existing = characterService.getCharacterById(id) ?: return ResponseEntity.notFound().build()
+
+        // Validate ownership
+        if (existing.accountId != currentUserAccountId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
+        // Enforce level-up logic if shouldLevelUp is true
+        val updatedCharacter = if (updateRequest.shouldLevelUp) {
+            characterService.levelUpCharacter(id, updateRequest)
+                ?: return ResponseEntity.notFound().build()
+        } else {
+            characterService.updateCharacter(id, updateRequest)
+                ?: return ResponseEntity.notFound().build()
+        }
+
+        return ResponseEntity.ok(updatedCharacter.toCharacterResponse(currentUserAccountId))
     }
 }

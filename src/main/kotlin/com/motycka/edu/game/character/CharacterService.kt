@@ -8,6 +8,7 @@ class CharacterService(
 ) {
 
     fun createCharacter(character: Character): Character {
+        character.validate() // Ensure validation is called
         return characterRepository.insertCharacter(character)
     }
 
@@ -27,35 +28,36 @@ class CharacterService(
         return characterRepository.findAll().filter { it.accountId != accountId }
     }
 
-    fun updateCharacter(id: Long, updatedCharacter: Character): Character? {
+    fun updateCharacter(id: Long, updateRequest: CharacterUpdateRequest): Character? {
         val existing = characterRepository.findById(id) ?: return null
-        // If the character is flagged to level up, handle that logic
-        val finalCharacter = if (updatedCharacter.shouldLevelUp) {
-            existing.levelUp().copy(
-                // preserve any updated stats (like name changes) if you allow them
-                name = updatedCharacter.name,
-                health = updatedCharacter.health,
-                attackPower = updatedCharacter.attackPower,
-                stamina = updatedCharacter.stamina,
-                defensePower = updatedCharacter.defensePower,
-                mana = updatedCharacter.mana,
-                healingPower = updatedCharacter.healingPower,
-                experience = updatedCharacter.experience // or reset to 0 if leveling up
-            )
-        } else {
-            // otherwise just keep updates
-            existing.copy(
-                name = updatedCharacter.name,
-                health = updatedCharacter.health,
-                attackPower = updatedCharacter.attackPower,
-                stamina = updatedCharacter.stamina,
-                defensePower = updatedCharacter.defensePower,
-                mana = updatedCharacter.mana,
-                healingPower = updatedCharacter.healingPower,
-                experience = updatedCharacter.experience,
-                shouldLevelUp = updatedCharacter.shouldLevelUp
-            )
-        }
-        return characterRepository.updateCharacter(finalCharacter)
+        val updated = existing.copy(
+            name = updateRequest.name,
+            health = updateRequest.health,
+            attackPower = updateRequest.attackPower,
+            stamina = updateRequest.stamina,
+            defensePower = updateRequest.defensePower,
+            mana = updateRequest.mana,
+            healingPower = updateRequest.healingPower,
+            experience = updateRequest.experience,
+            shouldLevelUp = updateRequest.shouldLevelUp
+        )
+        updated.validate()
+        return characterRepository.updateCharacter(updated)
+    }
+
+    fun levelUpCharacter(id: Long, updateRequest: CharacterUpdateRequest): Character? {
+        val existing = characterRepository.findById(id) ?: return null
+        val updated = existing.levelUp().copy(
+            name = updateRequest.name,
+            health = updateRequest.health,
+            attackPower = updateRequest.attackPower,
+            stamina = updateRequest.stamina,
+            defensePower = updateRequest.defensePower,
+            mana = updateRequest.mana,
+            healingPower = updateRequest.healingPower,
+            experience = 0 // Reset experience on level-up
+        )
+        updated.validate()
+        return characterRepository.updateCharacter(updated)
     }
 }

@@ -4,6 +4,8 @@ import com.motycka.edu.game.account.model.Account
 import com.motycka.edu.game.account.model.AccountId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.support.GeneratedKeyHolder
+import org.springframework.jdbc.support.KeyHolder
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
 
@@ -32,11 +34,18 @@ class AccountRepository(
             INSERT INTO account (name, username, password)
             VALUES (?, ?, ?)
         """.trimIndent()
-        jdbcTemplate.update(sql, account.name, account.username, account.password)
 
-        // Retrieve the new ID from H2
-        val idSql = "CALL IDENTITY()"
-        val newId = jdbcTemplate.queryForObject(idSql, Long::class.java) ?: return null
+        // Use GeneratedKeyHolder to retrieve the generated ID
+        val keyHolder: KeyHolder = GeneratedKeyHolder()
+        jdbcTemplate.update({ connection ->
+            val ps = connection.prepareStatement(sql, arrayOf("id"))
+            ps.setString(1, account.name)
+            ps.setString(2, account.username)
+            ps.setString(3, account.password)
+            ps
+        }, keyHolder)
+
+        val newId = keyHolder.key?.toLong() ?: return null
         return account.copy(id = newId)
     }
 

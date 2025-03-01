@@ -1,6 +1,8 @@
 package com.motycka.edu.game.character
 
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.support.GeneratedKeyHolder
+import org.springframework.jdbc.support.KeyHolder
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
 
@@ -16,23 +18,28 @@ class CharacterRepository(
                 level, experience, should_level_up
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
-        jdbcTemplate.update(
-            sql,
-            character.accountId,
-            character.name,
-            character.health,
-            character.attackPower,
-            character.stamina,
-            character.defensePower,
-            character.mana,
-            character.healingPower,
-            character.characterClass.name,
-            character.level,
-            character.experience,
-            character.shouldLevelUp
-        )
-        val id = jdbcTemplate.queryForObject("CALL IDENTITY()", Long::class.java) ?: 0
-        return character.copy(id = id)
+
+        // Use GeneratedKeyHolder to retrieve the generated ID
+        val keyHolder: KeyHolder = GeneratedKeyHolder()
+        jdbcTemplate.update({ connection ->
+            val ps = connection.prepareStatement(sql, arrayOf("id"))
+            ps.setLong(1, character.accountId)
+            ps.setString(2, character.name)
+            ps.setInt(3, character.health)
+            ps.setInt(4, character.attackPower)
+            ps.setObject(5, character.stamina)
+            ps.setObject(6, character.defensePower)
+            ps.setObject(7, character.mana)
+            ps.setObject(8, character.healingPower)
+            ps.setString(9, character.characterClass.name)
+            ps.setInt(10, character.level)
+            ps.setInt(11, character.experience)
+            ps.setBoolean(12, character.shouldLevelUp)
+            ps
+        }, keyHolder)
+
+        val newId = keyHolder.key?.toLong() ?: 0
+        return character.copy(id = newId)
     }
 
     fun findAll(): List<Character> {

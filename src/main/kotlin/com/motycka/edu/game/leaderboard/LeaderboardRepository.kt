@@ -36,11 +36,7 @@ class LeaderboardRepository(
         jdbcTemplate.update(sql, leaderboard.wins, leaderboard.losses, leaderboard.draws, leaderboard.characterId)
     }
 
-    /**
-     * Retrieve all leaderboard entries, optionally filter by class.
-     */
-    fun getLeaderboardEntries(filterClass: String?): List<LeaderboardEntry> {
-        // Join the 'characters' table to get needed character info
+    fun getLeaderboardEntries(filterClass: String?, currentUserAccountId: Long): List<LeaderboardEntry> {
         val baseSql = """
             SELECT lb.character_id,
                    lb.wins,
@@ -56,7 +52,8 @@ class LeaderboardRepository(
                    c.healing_power,
                    c.experience,
                    c.level,
-                   c.account_id
+                   c.account_id,
+                   c.should_level_up
             FROM leaderboard lb
             JOIN characters c ON lb.character_id = c.id
         """.trimIndent()
@@ -75,7 +72,7 @@ class LeaderboardRepository(
         }
 
         return jdbcTemplate.query(sql, { rs, _ ->
-            mapLeaderboardRow(rs)
+            mapLeaderboardRow(rs, currentUserAccountId)
         }, *params.toTypedArray())
     }
 
@@ -88,7 +85,7 @@ class LeaderboardRepository(
         )
     }
 
-    private fun mapLeaderboardRow(rs: ResultSet): LeaderboardEntry {
+    private fun mapLeaderboardRow(rs: ResultSet, currentUserAccountId: Long): LeaderboardEntry {
         val characterId = rs.getLong("character_id")
         val wins = rs.getInt("wins")
         val losses = rs.getInt("losses")
@@ -104,10 +101,10 @@ class LeaderboardRepository(
             mana = rs.getInt("mana").takeIf { !rs.wasNull() },
             healingPower = rs.getInt("healing_power").takeIf { !rs.wasNull() },
             characterClass = rs.getString("character_class"),
-            level = rs.getInt("level"),
+            level = rs.getInt("level").toString(), // Convert to String to match README
             experience = rs.getInt("experience"),
-            shouldLevelUp = false, // we don't know here
-            isOwner = false        // can't determine ownership here
+            shouldLevelUp = rs.getBoolean("should_level_up"),
+            isOwner = rs.getLong("account_id") == currentUserAccountId
         )
 
         return LeaderboardEntry(

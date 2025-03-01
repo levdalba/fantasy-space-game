@@ -1,6 +1,8 @@
 package com.motycka.edu.game.match
 
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.support.GeneratedKeyHolder
+import org.springframework.jdbc.support.KeyHolder
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -13,16 +15,20 @@ class MatchRepository(
             INSERT INTO matches (challenger_id, opponent_id, match_outcome, challenger_xp, opponent_xp)
             VALUES (?, ?, ?, ?, ?)
         """.trimIndent()
-        jdbcTemplate.update(sql,
-            match.challengerId,
-            match.opponentId,
-            match.matchOutcome,
-            match.challengerXp,
-            match.opponentXp
-        )
 
-        // retrieve the new ID
-        val newId = jdbcTemplate.queryForObject("CALL IDENTITY()", Long::class.java) ?: 0
+        // Use GeneratedKeyHolder to retrieve the generated ID
+        val keyHolder: KeyHolder = GeneratedKeyHolder()
+        jdbcTemplate.update({ connection ->
+            val ps = connection.prepareStatement(sql, arrayOf("id"))
+            ps.setLong(1, match.challengerId)
+            ps.setLong(2, match.opponentId)
+            ps.setString(3, match.matchOutcome)
+            ps.setInt(4, match.challengerXp)
+            ps.setInt(5, match.opponentXp)
+            ps
+        }, keyHolder)
+
+        val newId = keyHolder.key?.toLong() ?: 0
         return match.copy(id = newId)
     }
 
@@ -31,16 +37,21 @@ class MatchRepository(
             INSERT INTO rounds (match_id, round_number, character_id, health_delta, stamina_delta, mana_delta)
             VALUES (?, ?, ?, ?, ?, ?)
         """.trimIndent()
-        jdbcTemplate.update(
-            sql,
-            round.matchId,
-            round.roundNumber,
-            round.characterId,
-            round.healthDelta,
-            round.staminaDelta,
-            round.manaDelta
-        )
-        val newId = jdbcTemplate.queryForObject("CALL IDENTITY()", Long::class.java) ?: 0
+
+        // Use GeneratedKeyHolder to retrieve the generated ID
+        val keyHolder: KeyHolder = GeneratedKeyHolder()
+        jdbcTemplate.update({ connection ->
+            val ps = connection.prepareStatement(sql, arrayOf("id"))
+            ps.setLong(1, round.matchId)
+            ps.setInt(2, round.roundNumber)
+            ps.setLong(3, round.characterId)
+            ps.setInt(4, round.healthDelta)
+            ps.setInt(5, round.staminaDelta)
+            ps.setInt(6, round.manaDelta)
+            ps
+        }, keyHolder)
+
+        val newId = keyHolder.key?.toLong() ?: 0
         return round.copy(id = newId)
     }
 
