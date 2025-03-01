@@ -3,65 +3,59 @@ package com.motycka.edu.game.character
 import org.springframework.stereotype.Service
 
 @Service
-class CharacterService {
+class CharacterService(
+    private val characterRepository: CharacterRepository
+) {
 
-    /**
-     * In-memory list for demonstration; replace with a real repository if needed.
-     */
-    private val characters = mutableListOf<Character>()
-
-    /**
-     * Create a new character and add it to the in-memory list.
-     */
     fun createCharacter(character: Character): Character {
-        val newCharacter = character.copy(id = (characters.size + 1).toLong())
-        characters.add(newCharacter)
-        return newCharacter
+        return characterRepository.insertCharacter(character)
     }
 
-    /**
-     * Return all characters.
-     */
-    fun getAllCharacters(): List<Character> = characters
+    fun getAllCharacters(): List<Character> {
+        return characterRepository.findAll()
+    }
 
-    /**
-     * Return a character by ID or null if not found.
-     */
     fun getCharacterById(id: Long): Character? {
-        return characters.find { it.id == id }
+        return characterRepository.findById(id)
     }
 
-    /**
-     * Return characters owned by the given accountId (challengers).
-     */
     fun getChallengersForCurrentUser(accountId: Long): List<Character> {
-        return characters.filter { it.accountId == accountId }
+        return characterRepository.findByAccountId(accountId)
     }
 
-    /**
-     * Return characters NOT owned by the given accountId (opponents).
-     */
     fun getOpponentsForCurrentUser(accountId: Long): List<Character> {
-        return characters.filter { it.accountId != accountId }
+        return characterRepository.findAll().filter { it.accountId != accountId }
     }
 
-    /**
-     * Update an existing character’s attributes. If 'shouldLevelUp' is true,
-     * we call levelUp() to increment level and reset experience.
-     */
     fun updateCharacter(id: Long, updatedCharacter: Character): Character? {
-        val index = characters.indexOfFirst { it.id == id }
-        if (index != -1) {
-            val oldCharacter = characters[index]
-            val newCharacter = updatedCharacter.copy(
-                id = oldCharacter.id,
-                accountId = oldCharacter.accountId,
-                level = if (oldCharacter.shouldLevelUp) oldCharacter.levelUp().level else oldCharacter.level,
-                experience = if (oldCharacter.shouldLevelUp) 0 else oldCharacter.experience
+        val existing = characterRepository.findById(id) ?: return null
+        // If the character is flagged to level up, handle that logic
+        val finalCharacter = if (updatedCharacter.shouldLevelUp) {
+            existing.levelUp().copy(
+                // preserve any updated stats (like name changes) if you allow them
+                name = updatedCharacter.name,
+                health = updatedCharacter.health,
+                attackPower = updatedCharacter.attackPower,
+                stamina = updatedCharacter.stamina,
+                defensePower = updatedCharacter.defensePower,
+                mana = updatedCharacter.mana,
+                healingPower = updatedCharacter.healingPower,
+                experience = updatedCharacter.experience // or reset to 0 if leveling up
             )
-            characters[index] = newCharacter
-            return newCharacter
+        } else {
+            // otherwise just keep updates
+            existing.copy(
+                name = updatedCharacter.name,
+                health = updatedCharacter.health,
+                attackPower = updatedCharacter.attackPower,
+                stamina = updatedCharacter.stamina,
+                defensePower = updatedCharacter.defensePower,
+                mana = updatedCharacter.mana,
+                healingPower = updatedCharacter.healingPower,
+                experience = updatedCharacter.experience,
+                shouldLevelUp = updatedCharacter.shouldLevelUp
+            )
         }
-        return null
+        return characterRepository.updateCharacter(finalCharacter)
     }
 }

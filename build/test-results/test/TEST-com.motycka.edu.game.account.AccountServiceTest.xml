@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.motycka.edu.game.account.AccountServiceTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2025-03-01T04:31:47" hostname="Levans-MacBook-Pro-3.local" time="0.015">
+  <properties/>
+  <testcase name="getCurrentAccountId should return account id()" classname="com.motycka.edu.game.account.AccountServiceTest" time="0.007"/>
+  <testcase name="getByUsername should return account when found()" classname="com.motycka.edu.game.account.AccountServiceTest" time="0.004"/>
+  <testcase name="getByUsername should return null when not found()" classname="com.motycka.edu.game.account.AccountServiceTest" time="0.002"/>
+  <testcase name="createAccount should return created account()" classname="com.motycka.edu.game.account.AccountServiceTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -10,43 +10,38 @@ import org.springframework.stereotype.Service
 
 private val logger = KotlinLogging.logger {}
 
-/**
- * This is example of service implementation with repository dependency injection.
- */
 @Service
 class AccountService(
-    private val accountRepository: AccountRepository,
+    private val accountRepository: AccountRepository
 ) {
 
     fun getAccount(): Account {
         logger.debug { "Getting current user" }
         val currentUserId = getCurrentAccountId()
-        return accountRepository.selectById(id = getCurrentAccountId())
-            ?: throw UsernameNotFoundException(currentUserId.toString())
+        return accountRepository.selectById(currentUserId)
+            ?: throw UsernameNotFoundException("No user with id=$currentUserId")
     }
 
     fun getCurrentAccountId(): AccountId {
         val authentication = SecurityContextHolder.getContext().authentication
         val principal = authentication.principal
-        return if (principal is UserDetails) {
-            accountRepository.selectByUsername(principal.username)?.id ?: throw UsernameNotFoundException(principal.username)
+        if (principal is UserDetails) {
+            val account = accountRepository.selectByUsername(principal.username)
+                ?: throw UsernameNotFoundException(principal.username)
+            return account.id ?: throw UsernameNotFoundException("Account has null ID")
         } else {
-            error("Unknown principal type: $principal")
+            throw IllegalStateException("Unknown principal type: $principal")
         }
-    }
-
-    fun getByUsername(username: String): Account? {
-        logger.debug { "Getting user $username" }
-        return accountRepository.selectByUsername(username = username)
     }
 
     fun createAccount(account: Account): Account {
         logger.debug { "Creating new user: $account" }
-        return accountRepository.insertAccount(account = account) ?: error(CREATE_ERROR)
+        return accountRepository.insertAccount(account)
+            ?: error("Account could not be created.")
     }
 
-
-    companion object {
-        const val CREATE_ERROR = "Account could not be created."
+    fun getByUsername(username: String): Account? {
+        logger.debug { "Getting user with username=$username" }
+        return accountRepository.selectByUsername(username)
     }
 }

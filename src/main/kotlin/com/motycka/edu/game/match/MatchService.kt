@@ -3,6 +3,7 @@ package com.motycka.edu.game.match
 import com.motycka.edu.game.character.CharacterService
 import com.motycka.edu.game.leaderboard.LeaderboardService
 import org.springframework.stereotype.Service
+import kotlin.math.min
 
 @Service
 class MatchService(
@@ -11,11 +12,8 @@ class MatchService(
     private val leaderboardService: LeaderboardService
 ) {
 
-    /**
-     * Create a match, generate rounds, update characters, update leaderboard, and build a MatchResponse.
-     */
     fun createMatch(rounds: Int, challengerId: Long, opponentId: Long): MatchResponse {
-        // Simple "simulateMatch" logic: random outcome, XP gains.
+        // Simple "simulateMatch" logic
         val (challengerXp, opponentXp, outcome) = simulateMatch(rounds)
 
         // Save the match record
@@ -29,7 +27,7 @@ class MatchService(
             )
         )
 
-        // Generate and save each Round
+        // Generate rounds and save them
         val roundsList = (1..rounds).flatMap { roundNumber ->
             listOf(
                 Round(
@@ -52,20 +50,19 @@ class MatchService(
         }
         roundsList.forEach { matchRepository.saveRound(it) }
 
-        // Update character stats (experience, level-up if needed)
+        // Update character stats
         updateCharacterStats(challengerId, challengerXp, outcome == "WIN")
         updateCharacterStats(opponentId, opponentXp, outcome == "LOSS")
 
-        // Update the leaderboard (wins, losses, draws)
+        // Update leaderboard
         updateLeaderboard(challengerId, opponentId, outcome)
 
-        // Build and return the final JSON response that the UI expects
+        // Build the response
         val challenger = characterService.getCharacterById(challengerId)
-            ?: throw IllegalStateException("Challenger not found with id=$challengerId")
+            ?: error("Challenger not found with id=$challengerId")
         val opponent = characterService.getCharacterById(opponentId)
-            ?: throw IllegalStateException("Opponent not found with id=$opponentId")
+            ?: error("Opponent not found with id=$opponentId")
 
-        // Convert domain rounds to RoundResponse (UI wants "round" instead of "roundNumber")
         val roundResponses = roundsList.map { toRoundResponse(it) }
 
         return MatchResponse(
@@ -97,9 +94,6 @@ class MatchService(
         )
     }
 
-    /**
-     * Retrieve all matches from the DB, build a list of MatchResponse objects.
-     */
     fun getAllMatches(): List<MatchResponse> {
         val matchWithRounds = matchRepository.getAllMatches()
         if (matchWithRounds.isEmpty()) return emptyList()
@@ -108,12 +102,9 @@ class MatchService(
             val challenger = characterService.getCharacterById(match.challengerId)
             val opponent = characterService.getCharacterById(match.opponentId)
             if (challenger == null || opponent == null) {
-                // If somehow we can't find the characters, skip
                 null
             } else {
-                // Convert domain rounds to RoundResponse
                 val roundResponses = rounds.map { toRoundResponse(it) }
-
                 MatchResponse(
                     id = match.id.toString(),
                     challenger = CharacterSummary(
@@ -146,59 +137,41 @@ class MatchService(
     }
 
     /**
-     * A simple random simulation:
-     * - challenger gets 10 XP per round (max 100)
-     * - opponent gets 5 XP per round (max 50)
-     * - outcome is random (WIN or LOSS)
+     * Random logic: challenger gets 10 XP per round (max 100), opponent gets 5 XP per round (max 50).
+     * Outcome is random (WIN or LOSS, no draws).
      */
     private fun simulateMatch(rounds: Int): Triple<Int, Int, String> {
-        val challengerXp = (rounds * 10).coerceAtMost(100)
-        val opponentXp = (rounds * 5).coerceAtMost(50)
+        val challengerXp = min(rounds * 10, 100)
+        val opponentXp = min(rounds * 5, 50)
         val outcome = if (Math.random() < 0.5) "WIN" else "LOSS"
         return Triple(challengerXp, opponentXp, outcome)
     }
 
-    /**
-     * Increase character’s experience, set shouldLevelUp if experience >= level*1000
-     */
     private fun updateCharacterStats(characterId: Long, xpGained: Int, isVictor: Boolean) {
         val character = characterService.getCharacterById(characterId) ?: return
-        val newExperience = character.experience + xpGained
-        val newShouldLevelUp = newExperience >= (character.level * 1000)
-        val updatedCharacter = character.copy(
-            experience = newExperience,
-            shouldLevelUp = newShouldLevelUp
-        )
-        characterService.updateCharacter(characterId, updatedCharacter)
+        val newExp = character.experience + xpGained
+        val newShouldLevelUp = newExp >= (character.level * 1000)
+        val updated = character.copy(experience = newExp, shouldLevelUp = newShouldLevelUp)
+        characterService.updateCharacter(characterId, updated)
     }
 
-    /**
-     * Update the leaderboard with wins/losses/draws.
-     */
     private fun updateLeaderboard(challengerId: Long, opponentId: Long, outcome: String) {
         when (outcome) {
             "WIN" -> {
-                // Challenger wins
                 leaderboardService.recordWin(challengerId)
                 leaderboardService.recordLoss(opponentId)
             }
             "LOSS" -> {
-                // Opponent wins
                 leaderboardService.recordWin(opponentId)
                 leaderboardService.recordLoss(challengerId)
             }
             else -> {
-                // Draw
                 leaderboardService.recordDraw(challengerId)
                 leaderboardService.recordDraw(opponentId)
             }
         }
     }
 
-    /**
-     * Transform a domain Round into a RoundResponse that matches the UI’s JSON:
-     * "round" instead of "roundNumber", "characterId" as a string.
-     */
     private fun toRoundResponse(round: Round): RoundResponse {
         return RoundResponse(
             round = round.roundNumber,

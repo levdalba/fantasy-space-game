@@ -14,7 +14,7 @@ class AccountModelMapperTest {
             password = "password123"
         )
 
-        val account = request.toAccount()
+        val account = com.motycka.edu.game.account.model.toAccount()
 
         assertEquals(
             Account(
@@ -36,7 +36,7 @@ class AccountModelMapperTest {
             password = "***" // should mask the password
         )
 
-        val response = account.toAccountResponse()
+        val response = com.motycka.edu.game.account.model.toAccountResponse()
 
         assertEquals(
             AccountResponse(

@@ -6,60 +6,46 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
-import java.sql.SQLException
-import kotlin.collections.firstOrNull
 
 private val logger = KotlinLogging.logger {}
 
-/**
- * This is an example of repository implementation using JdbcTemplate.
- */
 @Repository
 class AccountRepository(
     private val jdbcTemplate: JdbcTemplate
 ) {
 
     fun selectById(id: AccountId): Account? {
-        logger.debug { "Selecting user by id $id" }
-        return jdbcTemplate.query(
-            "SELECT * FROM account WHERE id = ?;",
-            ::rowMapper,
-            id
-        ).firstOrNull()
+        logger.debug { "Selecting user by id=$id" }
+        val sql = "SELECT id, name, username, password FROM account WHERE id = ?"
+        return jdbcTemplate.query(sql, { rs, _ -> mapRow(rs) }, id).firstOrNull()
     }
 
     fun selectByUsername(username: String): Account? {
-        logger.debug { "Selecting user by username ***" }
-        return jdbcTemplate.query(
-            "SELECT * FROM account WHERE username = ?;",
-            ::rowMapper,
-            username
-        ).firstOrNull()
+        logger.debug { "Selecting user by username=***" }
+        val sql = "SELECT id, name, username, password FROM account WHERE username = ?"
+        return jdbcTemplate.query(sql, { rs, _ -> mapRow(rs) }, username).firstOrNull()
     }
 
     fun insertAccount(account: Account): Account? {
         logger.debug { "Inserting new user ${account.copy(password = "***")}" }
-        return jdbcTemplate.query(
-            """
-                SELECT * FROM FINAL TABLE (
-                    INSERT INTO account (name, username, password) 
-                    VALUES (?, ?, ?)
-                );
-            """.trimIndent(),
-            ::rowMapper,
-            account.name,
-            account.username,
-            account.password
-        ).firstOrNull()
+        val sql = """
+            INSERT INTO account (name, username, password)
+            VALUES (?, ?, ?)
+        """.trimIndent()
+        jdbcTemplate.update(sql, account.name, account.username, account.password)
+
+        // Retrieve the new ID from H2
+        val idSql = "CALL IDENTITY()"
+        val newId = jdbcTemplate.queryForObject(idSql, Long::class.java) ?: return null
+        return account.copy(id = newId)
     }
 
-    @Throws(SQLException::class)
-    private fun rowMapper(rs: ResultSet, i: Int): Account {
+    private fun mapRow(rs: ResultSet): Account {
         return Account(
-            rs.getLong("id"),
-            rs.getString("name"),
-            rs.getString("username"),
-            rs.getString("password")
+            id = rs.getLong("id"),
+            name = rs.getString("name"),
+            username = rs.getString("username"),
+            password = rs.getString("password")
         )
     }
 }

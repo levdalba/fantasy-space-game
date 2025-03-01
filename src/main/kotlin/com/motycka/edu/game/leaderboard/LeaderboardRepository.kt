@@ -11,52 +11,60 @@ class LeaderboardRepository(
 ) {
 
     fun findByCharacterId(characterId: Long): Leaderboard? {
-        val sql = "SELECT character_id, wins, losses, draws FROM leaderboard WHERE character_id = ?"
+        val sql = """
+            SELECT character_id, wins, losses, draws 
+            FROM leaderboard 
+            WHERE character_id = ?
+        """.trimIndent()
         return jdbcTemplate.query(sql, { rs, _ -> mapRow(rs) }, characterId).firstOrNull()
     }
 
     fun insert(leaderboard: Leaderboard) {
-        jdbcTemplate.update(
-            "INSERT INTO leaderboard (character_id, wins, losses, draws) VALUES (?, ?, ?, ?)",
-            leaderboard.characterId, leaderboard.wins, leaderboard.losses, leaderboard.draws
-        )
+        val sql = """
+            INSERT INTO leaderboard (character_id, wins, losses, draws)
+            VALUES (?, ?, ?, ?)
+        """.trimIndent()
+        jdbcTemplate.update(sql, leaderboard.characterId, leaderboard.wins, leaderboard.losses, leaderboard.draws)
     }
 
     fun update(leaderboard: Leaderboard) {
-        jdbcTemplate.update(
-            "UPDATE leaderboard SET wins = ?, losses = ?, draws = ? WHERE character_id = ?",
-            leaderboard.wins, leaderboard.losses, leaderboard.draws, leaderboard.characterId
-        )
+        val sql = """
+            UPDATE leaderboard
+            SET wins = ?, losses = ?, draws = ?
+            WHERE character_id = ?
+        """.trimIndent()
+        jdbcTemplate.update(sql, leaderboard.wins, leaderboard.losses, leaderboard.draws, leaderboard.characterId)
     }
 
     /**
      * Retrieve all leaderboard entries, optionally filter by class.
      */
     fun getLeaderboardEntries(filterClass: String?): List<LeaderboardEntry> {
-        // We join the 'character' table to get needed character info.
-        // "class" is a reserved word in Kotlin, so in the DB we have it as "class".
+        // Join the 'characters' table to get needed character info
         val baseSql = """
             SELECT lb.character_id,
                    lb.wins,
                    lb.losses,
                    lb.draws,
                    c.name,
-                   c.class,
+                   c.character_class,
                    c.health,
-                   c.attack,
-                   c.defense,
+                   c.attack_power,
                    c.stamina,
-                   c.healing,
+                   c.defense_power,
                    c.mana,
-                   c.experience
+                   c.healing_power,
+                   c.experience,
+                   c.level,
+                   c.account_id
             FROM leaderboard lb
-            JOIN character c ON lb.character_id = c.id
+            JOIN characters c ON lb.character_id = c.id
         """.trimIndent()
 
         val conditions = mutableListOf<String>()
         val params = mutableListOf<Any>()
         if (!filterClass.isNullOrBlank()) {
-            conditions.add("c.class = ?")
+            conditions.add("UPPER(c.character_class) = ?")
             params.add(filterClass.uppercase())
         }
 
@@ -85,24 +93,25 @@ class LeaderboardRepository(
         val wins = rs.getInt("wins")
         val losses = rs.getInt("losses")
         val draws = rs.getInt("draws")
-        val characterClass = rs.getString("class")
+
         val characterResponse = CharacterResponse(
             id = characterId,
             name = rs.getString("name"),
             health = rs.getInt("health"),
-            attackPower = rs.getInt("attack"),
+            attackPower = rs.getInt("attack_power"),
             stamina = rs.getInt("stamina").takeIf { !rs.wasNull() },
-            defensePower = rs.getInt("defense").takeIf { !rs.wasNull() },
+            defensePower = rs.getInt("defense_power").takeIf { !rs.wasNull() },
             mana = rs.getInt("mana").takeIf { !rs.wasNull() },
-            healingPower = rs.getInt("healing").takeIf { !rs.wasNull() },
-            characterClass = characterClass,
-            level = 1,            // In a more advanced setup, you'd store level in the DB
+            healingPower = rs.getInt("healing_power").takeIf { !rs.wasNull() },
+            characterClass = rs.getString("character_class"),
+            level = rs.getInt("level"),
             experience = rs.getInt("experience"),
-            shouldLevelUp = false,
-            isOwner = false       // We can't determine ownership from here, or you can join "account_id" if needed
+            shouldLevelUp = false, // we don't know here
+            isOwner = false        // can't determine ownership here
         )
+
         return LeaderboardEntry(
-            position = 0,  // will be set later
+            position = 0, // assigned later
             character = characterResponse,
             wins = wins,
             losses = losses,
@@ -110,13 +119,3 @@ class LeaderboardRepository(
         )
     }
 }
-
-/**
- * Minimal data class for leaderboard row.
- */
-data class Leaderboard(
-    val characterId: Long,
-    val wins: Int,
-    val losses: Int,
-    val draws: Int
-)

@@ -15,22 +15,22 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 class ExceptionHandlerAdvice : ResponseEntityExceptionHandler() {
 
     @ExceptionHandler(IllegalArgumentException::class)
-    fun handleBadRequest(ex: RuntimeException, request: WebRequest): ResponseEntity<Any> {
+    fun handleBadRequest(ex: RuntimeException, request: WebRequest): ResponseEntity<Any>? {
         return handleResponse(ex, HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(NotFoundException::class)
-    fun handleNotFound(ex: RuntimeException, request: WebRequest): ResponseEntity<Any> {
+    fun handleNotFound(ex: RuntimeException, request: WebRequest): ResponseEntity<Any>? {
         return handleResponse(ex, HttpStatus.NOT_FOUND, request);
     }
 
 
     @ExceptionHandler(AuthenticationException::class)
-    fun unauthorizedError(ex: RuntimeException, request: WebRequest): ResponseEntity<Any> {
+    fun unauthorizedError(ex: RuntimeException, request: WebRequest): ResponseEntity<Any>? {
         return handleResponse(ex, HttpStatus.UNAUTHORIZED, request);
     }
 
-    fun handleResponse(ex: Exception, status: HttpStatus, request: WebRequest): ResponseEntity<Any> {
+    fun handleResponse(ex: Exception, status: HttpStatus, request: WebRequest): ResponseEntity<Any>? {
         val response = ErrorResponse(ex.message ?: "Unknown error", status.value());
         return handleExceptionInternal(ex, response, HttpHeaders(), status, request);
     }
