@@ -32,8 +32,8 @@ class MatchService(
             ?: error("Opponent not found with id=$opponentId")
 
         // Simulate match
-        val (challengerXp, opponentXp, outcome, roundsList) = simulateMatch(rounds, challenger, opponent)
-        logger.info { "Match simulated: outcome=$outcome, challengerXp=$challengerXp, opponentXp=$opponentXp, roundsList.size=${roundsList.size}" }
+        val (challengerXp, opponentXp, outcome, roundsList, roundsPlayed) = simulateMatch(rounds, challenger, opponent)
+        logger.info { "Match simulated: outcome=$outcome, challengerXp=$challengerXp, opponentXp=$opponentXp, roundsList.size=${roundsList.size}, roundsPlayed=$roundsPlayed" }
 
         // Save the match record
         val savedMatch = matchRepository.saveMatch(
@@ -87,6 +87,7 @@ class MatchService(
                 isVictor = outcome == "LOSS"
             ),
             rounds = roundResponses,
+            roundsPlayed = roundsPlayed, // Should be 2 based on the battle timeline
             matchOutcome = when (outcome) {
                 "WIN" -> "CHALLENGER_WON"
                 "LOSS" -> "OPPONENT_WON"
@@ -127,6 +128,7 @@ class MatchService(
                         isVictor = match.matchOutcome == "LOSS"
                     ),
                     rounds = roundResponses,
+                    roundsPlayed = rounds.map { it.roundNumber }.maxOrNull() ?: 0, // Calculate rounds played from the database
                     matchOutcome = when (match.matchOutcome) {
                         "WIN" -> "CHALLENGER_WON"
                         "LOSS" -> "OPPONENT_WON"
@@ -137,33 +139,39 @@ class MatchService(
         }.filterNotNull()
     }
 
-    private fun simulateMatch(rounds: Int, challenger: Character, opponent: Character): Quadruple<Int, Int, String, List<Round>> {
+    private fun simulateMatch(rounds: Int, challenger: Character, opponent: Character): Quintuple<Int, Int, String, List<Round>, Int> {
         val roundsList = mutableListOf<Round>()
         var challengerHealth = challenger.health
         var opponentHealth = opponent.health
         var challengerStamina = challenger.stamina ?: 0
+        var opponentStamina = opponent.stamina ?: 0
+        var challengerMana = challenger.mana ?: 0
         var opponentMana = opponent.mana ?: 0
+        var roundsPlayed = 0
 
         for (roundNum in 1..rounds) {
+            roundsPlayed++
+
             // Challenger attacks opponent
             val challengerDamage = if (challenger.characterClass == Character.CharacterClass.WARRIOR) {
                 (challenger.attackPower - (opponent.defensePower ?: 0)).coerceAtLeast(0)
             } else {
                 challenger.attackPower
             }
-            opponentHealth = opponentHealth - challengerDamage
+            opponentHealth -= challengerDamage
             val challengerStaminaDelta = if (challenger.characterClass == Character.CharacterClass.WARRIOR) -5 else 0
-            challengerStamina = challengerStamina + challengerStaminaDelta
+            val challengerManaDelta = if (challenger.characterClass == Character.CharacterClass.SORCERER) -5 else 0
+            challengerStamina += challengerStaminaDelta
+            challengerMana += challengerManaDelta
 
             val challengerRound = Round(
-                matchId = 0, // Will be set after saving the match
+                matchId = 0,
                 roundNumber = roundNum,
                 characterId = challenger.id,
                 healthDelta = 0,
                 staminaDelta = challengerStaminaDelta,
-                manaDelta = 0
+                manaDelta = challengerManaDelta
             )
-            roundsList.add(challengerRound)
 
             // Opponent attacks challenger
             val opponentDamage = if (opponent.characterClass == Character.CharacterClass.SORCERER) {
@@ -171,44 +179,53 @@ class MatchService(
             } else {
                 (opponent.attackPower - (challenger.defensePower ?: 0)).coerceAtLeast(0)
             }
-            challengerHealth = challengerHealth - opponentDamage
+            challengerHealth -= opponentDamage
+            val opponentStaminaDelta = if (opponent.characterClass == Character.CharacterClass.WARRIOR) -5 else 0
             val opponentManaDelta = if (opponent.characterClass == Character.CharacterClass.SORCERER) -5 else 0
-            opponentMana = opponentMana + opponentManaDelta
+            opponentStamina += opponentStaminaDelta
+            opponentMana += opponentManaDelta
+
+            // Update the challenger's round with the actual health delta
+            challengerRound.healthDelta = -opponentDamage
+            roundsList.add(challengerRound)
 
             val opponentRound = Round(
                 matchId = 0,
                 roundNumber = roundNum,
                 characterId = opponent.id,
                 healthDelta = -challengerDamage,
-                staminaDelta = 0,
+                staminaDelta = opponentStaminaDelta,
                 manaDelta = opponentManaDelta
             )
             roundsList.add(opponentRound)
 
             // Check if match should end early
-            if (challengerHealth <= 0 || opponentHealth <= 0) break
+            if (challengerHealth <= 0 || opponentHealth <= 0) {
+                break
+            }
         }
 
-        // Determine outcome
+        // Determine outcome based on health
         val outcome = when {
             challengerHealth <= 0 && opponentHealth <= 0 -> "DRAW"
             challengerHealth <= 0 -> "LOSS"
             opponentHealth <= 0 -> "WIN"
             else -> {
-                val random = Random.nextDouble()
                 when {
-                    random < 0.45 -> "WIN"
-                    random < 0.90 -> "LOSS"
+                    challengerHealth > opponentHealth -> "WIN"
+                    opponentHealth > challengerHealth -> "LOSS"
                     else -> "DRAW"
                 }
             }
         }
 
-        // Calculate XP
-        val challengerXp = min(rounds * 10, 100)
-        val opponentXp = min(rounds * 5, 50)
+        // Calculate XP based on rounds played
+        val challengerXp = min(roundsPlayed * 10, 100)
+        val opponentXp = min(roundsPlayed * 5, 50)
 
-        return Quadruple(challengerXp, opponentXp, outcome, roundsList)
+        logger.info { "Match simulation completed: challengerHealth=$challengerHealth, opponentHealth=$opponentHealth, outcome=$outcome, roundsPlayed=$roundsPlayed" }
+
+        return Quintuple(challengerXp, opponentXp, outcome, roundsList, roundsPlayed)
     }
 
     private fun updateCharacterStats(characterId: Long, xpGained: Int, isVictor: Boolean) {
@@ -262,4 +279,4 @@ class MatchService(
     }
 }
 
-data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+data class Quintuple<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)

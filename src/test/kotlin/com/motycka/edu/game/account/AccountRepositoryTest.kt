@@ -1,7 +1,5 @@
 package com.motycka.edu.game.account
 
-import com.motycka.edu.game.account.AccountFixtures.DEVELOPER
-import com.motycka.edu.game.account.AccountFixtures.TESTER
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -26,36 +24,50 @@ class AccountRepositoryTest {
 
     @BeforeEach
     fun setUp() {
-        // insert test data
+        // Insert test data
         jdbcTemplate.update(
             "INSERT INTO account (name, username, password) VALUES (?, ?, ?)",
             AccountFixtures.DEVELOPER.name,
-            DEVELOPER.username,
-            DEVELOPER.password
+            AccountFixtures.DEVELOPER.username,
+            AccountFixtures.DEVELOPER.password
         )
     }
 
     @Test
     fun `insertAccount should return inserted account`() {
-        val result = accountRepository.insertAccount(TESTER)
+        val result = accountRepository.insertAccount(AccountFixtures.TESTER)
 
         assertNotNull(result)
         assertNotNull(result?.id)
-        assertEquals(TESTER.copy(id = result?.id), result)
+        assertEquals(AccountFixtures.TESTER.copy(id = result?.id), result)
     }
 
     @Test
     fun `selectByUsername should return account when found`() {
-        val result = accountRepository.selectByUsername(DEVELOPER.username)
-        assertEquals(DEVELOPER.copy(result?.id), result)
+        val result = accountRepository.selectByUsername(AccountFixtures.DEVELOPER.username)
+        assertNotNull(result)
         assertNotNull(result?.id)
-        assertEquals(DEVELOPER.copy(result?.id), result)
+        assertEquals(AccountFixtures.DEVELOPER.copy(id = result?.id), result)
     }
 
     @Test
     fun `selectByUsername should return null when not found`() {
-        val result = accountRepository.selectByUsername("unknown")
+        val result = accountRepository.selectByUsername(AccountFixtures.UNKNOWN)
         assertNull(result)
     }
 
+    @Test
+    fun `selectById should return account when found`() {
+        // Get the ID of the inserted DEVELOPER account
+        val insertedId = jdbcTemplate.queryForObject("SELECT id FROM account WHERE username = ?", Long::class.java, AccountFixtures.DEVELOPER.username)
+        val result = accountRepository.selectById(insertedId)
+        assertNotNull(result)
+        assertEquals(AccountFixtures.DEVELOPER.copy(id = insertedId), result)
+    }
+
+    @Test
+    fun `selectById should return null when not found`() {
+        val result = accountRepository.selectById(999L) // Non-existent ID
+        assertNull(result)
+    }
 }

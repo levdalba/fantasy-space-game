@@ -1,8 +1,8 @@
 package com.motycka.edu.game
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertTrue // Import assertTrue
 import org.springframework.boot.test.context.SpringBootTest
-import kotlin.test.assertTrue
 
 @SpringBootTest
 class GameApplicationTest {

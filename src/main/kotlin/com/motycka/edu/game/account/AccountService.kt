@@ -1,47 +1,43 @@
 package com.motycka.edu.game.account
 
 import com.motycka.edu.game.account.model.Account
-import com.motycka.edu.game.account.model.AccountId
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Service
-
-private val logger = KotlinLogging.logger {}
 
 @Service
 class AccountService(
     private val accountRepository: AccountRepository
 ) {
 
-    fun getAccount(): Account {
-        logger.debug { "Getting current user" }
-        val currentUserId = getCurrentAccountId()
-        return accountRepository.selectById(currentUserId)
-            ?: throw UsernameNotFoundException("No user with id=$currentUserId")
-    }
-
-    fun getCurrentAccountId(): AccountId {
-        val authentication = SecurityContextHolder.getContext().authentication
-        val principal = authentication.principal
-        if (principal is UserDetails) {
-            val account = accountRepository.selectByUsername(principal.username)
-                ?: throw UsernameNotFoundException(principal.username)
-            return account.id ?: throw UsernameNotFoundException("Account has null ID")
-        } else {
-            throw IllegalStateException("Unknown principal type: $principal")
+    fun getByUsername(username: String): Account? {
+        if (username.isBlank()) {
+            throw IllegalArgumentException("Username cannot be empty")
         }
+        return accountRepository.selectByUsername(username)
     }
 
     fun createAccount(account: Account): Account {
-        logger.debug { "Creating new user: $account" }
-        return accountRepository.insertAccount(account)
-            ?: error("Account could not be created.")
+        // Validate account fields
+        if (account.name.isBlank()) {
+            throw IllegalArgumentException("Name cannot be empty")
+        }
+        if (account.username.isBlank()) {
+            throw IllegalArgumentException("Username cannot be empty")
+        }
+        if (account.password.isBlank()) {
+            throw IllegalArgumentException("Password cannot be empty")
+        }
+        return accountRepository.insertAccount(account) ?: throw IllegalStateException("Failed to create account")
     }
 
-    fun getByUsername(username: String): Account? {
-        logger.debug { "Getting user with username=$username" }
-        return accountRepository.selectByUsername(username)
+    fun getAccount(): Account {
+        val username = SecurityContextHolder.getContext().authentication?.name
+            ?: throw IllegalStateException("No authenticated user found")
+        return getByUsername(username) ?: throw IllegalArgumentException("User not found: $username")
+    }
+
+    fun getCurrentAccountId(): Long {
+        val account = getAccount()
+        return account.id ?: throw IllegalStateException("Account ID not found")
     }
 }

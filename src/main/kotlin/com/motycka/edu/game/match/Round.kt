@@ -5,7 +5,7 @@ data class Round(
     val matchId: Long,
     val roundNumber: Int,
     val characterId: Long,
-    val healthDelta: Int,
+    var healthDelta: Int,
     val staminaDelta: Int,
     val manaDelta: Int
 )

@@ -6,5 +6,5 @@ data class AccountResponse(
     val id: AccountId,
     val name: String,
     val username: String,
-    val password: String
+    val password: String // Masked as "***"
 )

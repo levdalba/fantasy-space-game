@@ -298,7 +298,7 @@ class MatchesTab {
                                         </div>
                                     </td>
                                     <td class="text-center">
-                                        ${match.rounds.length}
+                                        ${match.rounds.length / 2}
                                     </td>
                                 </tr>
                             `;
@@ -440,7 +440,7 @@ class MatchesTab {
                         </div>
                         
                         <div class="match-vs">
-                            <span>${match.rounds.length}</span>
+                            <span>${match.rounds.length / 2}</span>
                         </div>
                         
                         <div class="opponent" data-class="${match.opponent.characterClass}">

@@ -11,13 +11,18 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.NoOpPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfiguration(private val userService: AccountService) {
+class SecurityConfiguration(private val userService: AccountService?) {
+
+    init {
+        // Validate that userService is not null
+        requireNotNull(userService) { "AccountService must not be null" }
+    }
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
@@ -38,26 +43,20 @@ class SecurityConfiguration(private val userService: AccountService) {
     }
 
     @Bean
-    fun userDetailsService() = UserDetailsService { username ->
-        val user = userService.getByUsername(username)
-            ?: throw UsernameNotFoundException("User not found")
+    fun userDetailsService(): UserDetailsService = UserDetailsService { username ->
+        val user = userService?.getByUsername(username)
+            ?: throw UsernameNotFoundException("User not found: $username")
 
         User.builder()
             .username(user.username)
-            .password(passwordEncoder().encode(user.password))
+            .password(user.password) // Password is now plain text
             .roles("USER")
             .build()
     }
 
-
     @Bean
-    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
-}
-
-
-fun main() {
-    val password = "heslo"
-    val passwordEncoder = BCryptPasswordEncoder()
-    val encodedPassword = passwordEncoder.encode(password)
-    println(encodedPassword)
+    fun passwordEncoder(): PasswordEncoder {
+        @Suppress("DEPRECATION")
+        return NoOpPasswordEncoder.getInstance() // Use plain text passwords
+    }
 }

@@ -2,7 +2,7 @@ package com.motycka.edu.game.account.rest
 
 import com.motycka.edu.game.account.model.Account
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals // Import assertEquals
 
 class AccountModelMapperTest {
 
@@ -14,7 +14,8 @@ class AccountModelMapperTest {
             password = "password123"
         )
 
-        val account = com.motycka.edu.game.account.model.toAccount()
+        // Call toAccount on the request object, not the package
+        val account = request.toAccount()
 
         assertEquals(
             Account(
@@ -33,10 +34,11 @@ class AccountModelMapperTest {
             id = 1L,
             name = "John Doe",
             username = "johndoe",
-            password = "***" // should mask the password
+            password = "***" // Password should be masked in the response
         )
 
-        val response = com.motycka.edu.game.account.model.toAccountResponse()
+        // Call toAccountResponse on the account object, not the package
+        val response = account.toAccountResponse()
 
         assertEquals(
             AccountResponse(

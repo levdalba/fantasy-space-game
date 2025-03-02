@@ -7,14 +7,12 @@ import com.motycka.edu.game.account.rest.toAccount
 import com.motycka.edu.game.account.rest.toAccountResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/accounts")
 class AccountController(
-    private val accountService: AccountService,
-    private val passwordEncoder: PasswordEncoder // Inject PasswordEncoder
+    private val accountService: AccountService
 ) {
 
     @GetMapping
@@ -24,11 +22,25 @@ class AccountController(
 
     @PostMapping
     fun postAccount(@RequestBody request: AccountRegistrationRequest): ResponseEntity<AccountResponse> {
-        // Encode the password before creating the account
-        val accountWithEncodedPassword = request.toAccount().copy(
-            password = passwordEncoder.encode(request.password)
-        )
-        val created = accountService.createAccount(accountWithEncodedPassword)
+        // Validate input
+        if (request.name.isBlank()) {
+            throw IllegalArgumentException("Name cannot be empty")
+        }
+        if (request.username.isBlank()) {
+            throw IllegalArgumentException("Username cannot be empty")
+        }
+        if (request.password.isBlank()) {
+            throw IllegalArgumentException("Password cannot be empty")
+        }
+
+        // Check for duplicate username
+        if (accountService.getByUsername(request.username) != null) {
+            throw IllegalArgumentException("Username already exists")
+        }
+
+        // No password encoding needed; store as plain text
+        val account = request.toAccount()
+        val created = accountService.createAccount(account)
         return ResponseEntity.status(HttpStatus.CREATED).body(created.toAccountResponse())
     }
 }
